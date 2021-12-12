@@ -17,7 +17,9 @@ namespace WebApiRoulette.Models
         [Required]
         public string status { set; get; }
         [Required]
-        public List<Bet> bets { set; get; }
+        public IList<Bet> bets_open { set; get; }
+
+        public IList<Bet> bets_close { set; get; }
 
     }
 }

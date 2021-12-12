@@ -27,7 +27,8 @@ namespace WebApiRoulette.Controllers
                 {
                     name = "Roulette." + indexItem,
                     create_at = DateTime.Now,
-                    status = "Open"
+                    status = "Open",
+                    id = indexItem,
                 };
                 long RouletteId = redisDB.ListRightPush("Roulettes", JsonConvert.SerializeObject(newItem));
 
@@ -70,27 +71,103 @@ namespace WebApiRoulette.Controllers
         }
 
 
-        public Roulette GetRoulette(long id)
+        [HttpPut("Roulette/bet/{id}/{userid}")]
+        public bool play(long id, int userId, Bet betCurrent)
+        {
+
+            try
             {
                 var redisDB = connection.Connection.GetDatabase();
-                var currentItem = redisDB.ListRange("Roulettes", id - 1, id - 1);
-                Roulette currentRoulette = new Roulette();
+                var userCurrent = redisDB.ListRange("Users", userId - 1, userId - 1);
+                bool success = false;
 
-                if (currentItem.Length > 0)
+
+                if (userCurrent.Length > 0)
                 {
-                    currentRoulette = JsonConvert.DeserializeObject<Roulette>(currentItem[0]);
+                    User user = JsonConvert.DeserializeObject<User>(userCurrent[0]);
+                    if (betCurrent.money < 10000 || betCurrent.money < user.money)
+                    {
+                        user.money = user.money - betCurrent.money;
+                        redisDB.ListSetByIndex("Users", userId - 1, JsonConvert.SerializeObject(user));
+                    }
+                    Roulette currentRoulette = GetRoulette(id);
+                    if (currentRoulette.name != null)
+                    {
+                        betCurrent.userId = userId;
+
+                        if (currentRoulette.bets_open == null)
+                        {
+                            List<Bet> betlist = new List<Bet>();
+                            betlist.Add(betCurrent);
+
+                            currentRoulette.bets_open = betlist;
+                        }
+                        else
+                        {
+                            currentRoulette.bets_open.Add(betCurrent);
+                        }
+
+
+                        redisDB.ListSetByIndex("Roulettes", id - 1, JsonConvert.SerializeObject(currentRoulette));
+                    }
+
+                    return success;
 
                 }
 
-                return currentRoulette;
+                else
+                {
+
+                    return success;
+
+                }
+
+            }
+            catch (Exception e)
+            {
+                return false;
+
             }
 
-
-
-
-
-
-
-
         }
+
+
+
+        [HttpPost("User/create")]
+        public long CreateUser(User user)
+        {
+            var redisDB = connection.Connection.GetDatabase();
+            long indexItem = redisDB.ListRange("Users").Length + 1;
+            user.id = indexItem;
+            long id = redisDB.ListRightPush("Users", JsonConvert.SerializeObject(user));
+
+            return id;
+        }
+
+
+
+
+
+        public Roulette GetRoulette(long id)
+        {
+            var redisDB = connection.Connection.GetDatabase();
+            var currentItem = redisDB.ListRange("Roulettes", id - 1, id - 1);
+            Roulette currentRoulette = new Roulette();
+            if (currentItem.Length > 0)
+            {
+                currentRoulette = JsonConvert.DeserializeObject<Roulette>(currentItem[0]);
+
+            }
+
+            return currentRoulette;
+        }
+
+
+
+
+
+
+
+
     }
+}

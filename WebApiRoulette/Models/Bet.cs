@@ -8,14 +8,13 @@ namespace WebApiRoulette.Models
 {
     public class Bet
     {
-        [Required]
-        public int id { set; get; }
+
         [Required]
         public long money { set; get; }
         [Required]
         public string typeBet { set; get; }
-        [Required]
         public long userId { set; get; }
+        public string winner { set; get; }
 
     }
 }

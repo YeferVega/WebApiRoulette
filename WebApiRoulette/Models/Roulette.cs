@@ -13,7 +13,7 @@ namespace WebApiRoulette.Models
         [Required]
         public string name { set; get; }
         [Required]
-        public DateTime create_at { set; get; }
+        public string create_at { set; get; }
         [Required]
         public string status { set; get; }
         [Required]

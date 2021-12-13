@@ -14,7 +14,7 @@ namespace WebApiRoulette.Models
         [Required]
         public string typeBet { set; get; }
         public long userId { set; get; }
-        public string winner { set; get; }
+        public int winner { set; get; }
 
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -80,9 +81,11 @@ namespace WebApiRoulette.Controllers
                 var redisDB = connection.Connection.GetDatabase();
                 var userCurrent = redisDB.ListRange("Users", userId - 1, userId - 1);
                 bool success = false;
+                betCurrent.typeBet = betCurrent.typeBet.ToLower();
 
+                bool bet_validation = betCurrent.typeBet != null && Regex.IsMatch(betCurrent.typeBet, @"^[0-9]$|^[1-2][0-9]$|^3[0-6]$");
 
-                if (userCurrent.Length > 0)
+                if (userCurrent.Length > 0 && (betCurrent.typeBet == "black" || betCurrent.typeBet == "red" || bet_validation))
                 {
                     User user = JsonConvert.DeserializeObject<User>(userCurrent[0]);
                     if (betCurrent.money < 10000 || betCurrent.money < user.money)
@@ -109,6 +112,8 @@ namespace WebApiRoulette.Controllers
 
 
                         redisDB.ListSetByIndex("Roulettes", id - 1, JsonConvert.SerializeObject(currentRoulette));
+
+                        success = true;
                     }
 
                     return success;
@@ -130,6 +135,88 @@ namespace WebApiRoulette.Controllers
             }
 
         }
+
+
+        [HttpPut("Roulette/close/{id}")]
+        public bool Close(long id)
+        {
+
+            try
+            {
+                var redisDB = connection.Connection.GetDatabase();
+                bool success = false;
+                Roulette currentRoulette = GetRoulette(id);
+                currentRoulette.status = "Close";
+                var rand = new Random();
+                int winnernumber = rand.Next(0, 36);
+                string winnerstring = winnernumber.ToString();
+                double winnermoney;
+
+                if (currentRoulette.name != null)
+                {
+                    foreach (Bet item in currentRoulette.bets_open)
+                    {
+                        item.winner = winnernumber;
+
+                        if (winnerstring == item.typeBet)
+                        {
+                            winnermoney = item.money * 5;
+                        }
+                        else if (item.typeBet == "red" || winnernumber % 2 != 0)
+                        {
+                            winnermoney = item.money * 1.8;
+
+                        }
+                        else if (item.typeBet == "black" || winnernumber % 2 == 0)
+                        {
+                            winnermoney = item.money * 1.8;
+
+                        }
+                        else
+                        {
+                            winnermoney = 0;
+                        }
+
+                        if (currentRoulette.bets_close == null)
+                        {
+                            List<Bet> betlist = new List<Bet>();
+                            betlist.Add(item);
+                            currentRoulette.bets_close = betlist;
+                        }
+                        else
+                        {
+                            currentRoulette.bets_close.Add(item);
+                        }
+
+                        var userCurrent = redisDB.ListRange("Users", item.userId - 1, item.userId - 1);
+
+                        if (userCurrent.Length > 0)
+                        {
+                            User user = JsonConvert.DeserializeObject<User>(userCurrent[0]);
+                            user.money = winnermoney + user.money;
+                            redisDB.ListSetByIndex("Users", item.userId - 1, JsonConvert.SerializeObject(user));
+                        }
+
+
+
+                    }
+
+                    currentRoulette.bets_open.Clear();
+
+                    redisDB.ListSetByIndex("Roulettes", id - 1, JsonConvert.SerializeObject(currentRoulette));
+                    success = true;
+                }
+
+                return success;
+            }
+            catch
+            {
+                return false;
+
+            }
+
+        }
+
 
 
 

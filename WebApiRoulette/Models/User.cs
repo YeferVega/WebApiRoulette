@@ -14,6 +14,6 @@ namespace WebApiRoulette.Models
         [Required]
         public string email { set; get; }
         [Required]
-        public  long money { set; get; }
+        public  double money { set; get; }
     }
 }

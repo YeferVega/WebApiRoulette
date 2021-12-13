@@ -233,6 +233,28 @@ namespace WebApiRoulette.Controllers
 
 
 
+        [HttpGet("Roulette/show")]
+        public List<Roulette> ShowRoulette()
+        {
+            var redisDB = connection.Connection.GetDatabase();
+            var currentItem = redisDB.ListRange("Roulettes", 0, -1);
+            List<Roulette> listRulettes = new List<Roulette>();
+
+
+
+            if (currentItem.Length > 0)
+            {
+                for (var i = 0; i < currentItem.Length; i++)
+                {
+                    Roulette item = JsonConvert.DeserializeObject<Roulette>(currentItem[i]);
+                    listRulettes.Add(item);
+                }
+            }
+
+            return listRulettes;
+        }
+
+
 
 
         public Roulette GetRoulette(long id)
